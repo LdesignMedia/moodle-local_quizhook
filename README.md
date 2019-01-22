@@ -8,8 +8,11 @@ Monitoring for quiz new attempt, set a new grade automatic when essay is used.
 * Min. required: Moodle 3.5.x
 * Supports PHP: 7.0 | 7.1 
 
+![Moodle35](https://img.shields.io/badge/moodle-3.5-brightgreen.svg)
+![PHP7.0](https://img.shields.io/badge/PHP-7.0-brightgreen.svg)
+
 ## List of features
-- @hook
+- Setting a 0 sumgraded if essay questions are used.
 
 ## Installation
 1.  Copy this plugin to the `local\quizhook` folder on the server

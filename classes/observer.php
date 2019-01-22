@@ -27,12 +27,15 @@
 namespace local_quizhook;
 
 use completion_info;
+use context_course;
 
 defined('MOODLE_INTERNAL') || die;
 
 class observer {
 
     /**
+     * Attempt submitted
+     *
      * @param \mod_quiz\event\attempt_submitted $event
      *
      * @throws \dml_exception
@@ -45,17 +48,26 @@ class observer {
         if ($event->get_context()->contextlevel != CONTEXT_MODULE) {
             return;
         }
+
+        // Get records.
         $attempt = $DB->get_record('quiz_attempts', ['id' => $event->objectid]);
-        if (empty($attempt->sumgrades)) {
+        $quiz = $event->get_record_snapshot('quiz', $attempt->quiz);
+
+        if (empty($attempt->sumgrades) &&
+            self::has_essay_questions($quiz)) {
 
             // Set a 0 grade.
-            $DB->update_record('quiz_attempts', (object)[
-                'id' => $attempt->id,
-                'sumgrades' => 0,
-            ]);
-            $quiz = $event->get_record_snapshot('quiz', $attempt->quiz);
+            $grade = new \stdClass();
+            $grade->userid = $event->relateduserid;
+            $grade->rawgrade = 0;
+            quiz_grade_item_update($quiz, $grade);
 
-            quiz_update_grades($quiz, $event->relateduserid);
+            // Update all.
+            quiz_update_all_attempt_sumgrades($quiz);
+            quiz_update_all_final_grades($quiz);
+
+            // Make sure completion is visible.
+            context_course::instance($event->courseid)->mark_dirty(); // reset caches
 
             // Make sure completion is also set.
 //            $cm = get_coursemodule_from_id('quiz', $event->get_context()->instanceid, $event->courseid);
@@ -65,6 +77,27 @@ class observer {
 //                $completion->update_state($cm, COMPLETION_COMPLETE, $event->relateduserid);
 //            }
         }
+    }
+
+    /**
+     * has_essay_questions
+     *
+     * @param \stdClass $quiz
+     *
+     * @return bool
+     * @throws \dml_exception
+     */
+    private static function has_essay_questions(\stdClass $quiz) : bool {
+        global $DB;
+        $sql = 'select s.id from {quiz_slots} s
+                join {question} q on (q.id = s.questionid)
+                where q.qtype = "essay" and s.quizid = :quizid';
+        $row = $DB->get_record_sql($sql, ['quizid' => $quiz->id], IGNORE_MULTIPLE);
+        if (!empty($row)) {
+            return true;
+        }
+
+        return false;
     }
 
 }
