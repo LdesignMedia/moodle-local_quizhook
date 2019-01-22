@@ -69,6 +69,10 @@ class observer {
             // Make sure completion is visible.
             context_course::instance($event->courseid)->mark_dirty(); // reset caches
 
+            // Make sure there is a 0 grade.
+            $DB->update_record('quiz_attempts' , (object)['id'=> $event->objectid , 'sumgrades' => 0]);
+
+
             // Make sure completion is also set.
 //            $cm = get_coursemodule_from_id('quiz', $event->get_context()->instanceid, $event->courseid);
 //            $course = $DB->get_record('course', ['id' => $event->courseid]);
